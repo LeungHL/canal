@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.math.BigInteger;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -155,7 +156,7 @@ public class PhoenixEtlService {
                 etlResult.setErrorMessage("Config is null!");
                 return etlResult;
             }
-            boolean debug = params != null && params.get(0).equals("_debug");
+            boolean debug = params != null && params.size()>0 &&params.get(0).equals("_debug");
             if (debug) {
                 params = params.subList(1, params.size());
             }
@@ -421,9 +422,21 @@ public class PhoenixEtlService {
                 srcColumnName = targetColumnName;
             }
             sql.append(dbMapping.escape(targetColumnName)).append("=? AND ");
-            values.put(targetColumnName, rs.getObject(srcColumnName));
+            values.put(targetColumnName, checkAndConvertBigInteger(rs.getObject(srcColumnName)));
         }
         int len = sql.length();
         sql.delete(len - 4, len);
+    }
+
+    /**
+     * phoenix对BigInteger类型不兼容，需要转一下，否则程序出错
+     * @param obj
+     * @return
+     */
+    private static Object checkAndConvertBigInteger(Object obj){
+        if(obj instanceof BigInteger){
+            return ((BigInteger)obj).longValue();
+        }
+        return obj;
     }
 }
